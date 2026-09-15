@@ -13,3 +13,8 @@ profiles/daemon.log
 *.keystore
 android/key.properties
 pc_remote/android/keystore.pass
+
+.idea/
+
+.agents/
+skills-lock.json

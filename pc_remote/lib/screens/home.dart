@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../widgets/ui.dart';
 
-/// Home dashboard: PC header, animated brightness ring,
-/// lock/unlock actions, activity timeline. Pull to refresh.
+/// Home dashboard: connected WiFi PC (by NAME, not IP), animated
+/// brightness ring, lock/unlock actions, activity timeline.
+/// Pull to refresh.
 class HomeScreen extends StatefulWidget {
   final PcApi api;
-  const HomeScreen({super.key, required this.api});
+  final VoidCallback? onChangePc;
+  const HomeScreen({super.key, required this.api, this.onChangePc});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -15,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _status;
   bool _online = false;
+  String _err = '';
 
   Future<void> _refresh() async {
     try {
@@ -23,10 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _status = s;
           _online = true;
+          _err = '';
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _online = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _online = false;
+          _err = PcApi.friendlyError(e);
+        });
+      }
     }
   }
 
@@ -45,6 +54,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final bri = (_status?['brightness'] as num?)?.toInt() ?? 0;
     final suggest = (_status?['suggest'] as num?)?.toInt() ?? 0;
     final log = (_status?['log'] as List?)?.cast<String>() ?? const <String>[];
+    // Prefer the live hostname from /status, fall back to the
+    // WiFi-discovered name saved at unlock, never show a bare IP first.
+    final pcName = (_status?['pc']?.toString().isNotEmpty ?? false)
+        ? _status!['pc'].toString()
+        : widget.api.displayName;
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
@@ -63,15 +77,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                const AppLogo(size: 40),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_status?['pc']?.toString() ?? 'My PC',
+                      Text(pcName.isEmpty ? 'My PC' : pcName,
                           style: Theme.of(context).textTheme.titleLarge),
                       Text(
                         _online
-                            ? '${_status?['lux'] ?? '…'} lux via ${_status?['src'] ?? '…'}'
+                            ? 'Connected on WiFi · ${_status?['lux'] ?? '…'} lux via ${_status?['src'] ?? '…'}'
                             : 'Offline — pull down to retry',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
@@ -83,9 +99,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: _refresh,
                   icon: const Icon(Icons.refresh),
                 ),
+                if (widget.onChangePc != null)
+                  IconButton(
+                    tooltip: 'Change PC',
+                    onPressed: widget.onChangePc,
+                    icon: const Icon(Icons.wifi_find),
+                  ),
               ],
             ),
           ),
+          if (_err.isNotEmpty)
+            ResponsiveCard(
+              child: Text(_err, style: const TextStyle(fontSize: 13)),
+            ),
           ResponsiveCard(
             child: Column(
               children: [
@@ -95,8 +121,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Auto once',
                   icon: Icons.auto_awesome,
                   onTap: () async {
-                    await widget.api.autoOnce();
-                    await _refresh();
+                    try {
+                      await widget.api.autoOnce();
+                      await _refresh();
+                    } catch (e) {
+                      _msg(PcApi.friendlyError(e));
+                    }
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Auto-brightness'),
+                  subtitle:
+                      const Text('Keep adjusting with room light'),
+                  value: (_status?['auto'] as bool?) ?? true,
+                  onChanged: (v) async {
+                    try {
+                      await widget.api.setAuto(v);
+                      await _refresh();
+                    } catch (e) {
+                      _msg(PcApi.friendlyError(e));
+                    }
                   },
                 ),
               ],
@@ -112,8 +156,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.lock,
                     color: Colors.red,
                     onTap: () async {
-                      await widget.api.lock();
-                      _msg('PC locked');
+                      try {
+                        await widget.api.lock();
+                        _msg('PC locked');
+                      } catch (e) {
+                        _msg(PcApi.friendlyError(e));
+                      }
                     },
                   ),
                 ),
@@ -124,8 +172,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.lock_open,
                     color: Colors.green,
                     onTap: () async {
-                      await widget.api.unlockApprove();
-                      _msg('Approved — press Space on PC + log in');
+                      try {
+                        await widget.api.unlockApprove();
+                        _msg('Approved — press Space on PC + log in');
+                      } catch (e) {
+                        _msg(PcApi.friendlyError(e));
+                      }
                     },
                   ),
                 ),

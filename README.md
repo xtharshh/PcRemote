@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🖥️📱 PcRemote
+# 🖥️📱 LumiLink
 
 ### Your Windows PC, remotely yours — brightness, profiles & lock, from your phone.
 
@@ -10,14 +10,14 @@
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 Windows never got Mac-style auto-brightness, Apple-Watch-style phone unlock,
-or per-person profiles you control from your pocket. **PcRemote fixes all three**
+or per-person profiles you control from your pocket. **LumiLink fixes all three**
 with small modules sharing one sensor + service stack.
 
 <a href="https://www.buymeacoffee.com/xtharshh">
 <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" />
 </a>
 
-*If PcRemote saved your eyes or your privacy, consider fueling the next feature. ☕*
+*If LumiLink saved your eyes or your privacy, consider fueling the next feature. ☕*
 
 </div>
 
@@ -138,14 +138,17 @@ npm install
 npx expo start        # scan QR with Expo Go (Play Store), same WiFi
 ```
 
-## 💙 Flutter app (recommended) — `pc_remote/`
+## 💙 LumiLink app (recommended) — `pc_remote/`
 
 Skill-built UI (seed Material 3, composed widgets, implicit animations,
 `ListView.builder`, `Semantics`, responsive cards):
-gate with fingerprint + **Find my PC on WiFi** (UDP beacon, zero typing),
-dashboard with animated brightness ring + lock/unlock + activity timeline,
-brightness slider, **visual profile editor** (chips + sliders, no JSON),
-folder picker with search that saves straight into a profile.
+gate with fingerprint + **Find my PC on WiFi** (UDP beacon with HTTP
+subnet-sweep fallback, zero typing), Home shows the **PC name on WiFi**,
+dashboard with animated brightness ring + auto-brightness toggle +
+lock/unlock + activity timeline, brightness slider,
+**visual profile editor** (chips + sliders, no JSON, incl. **Admin —
+full access**), folder picker with search that saves straight into
+a profile.
 
 ```powershell
 Set-Location pc_remote
@@ -157,8 +160,10 @@ flutter run              # install + launch
 flutter build apk --release   # keep-forever APK
 ```
 
-**Signed release APK** already built:
+**Signed release APK** already built (v1.1.0):
 `pc_remote/build/app/outputs/flutter-apk/app-release.apk` (50 MB).
+Reinstall fresh so Android grants the LAN/WiFi permissions
+(same WiFi, allow WiFi/location when asked).
 
 Release signing: `pc_remote/android/key.properties` + `.jks` are gitignored —
 generate your own with `keytool -genkeypair` (see
@@ -247,7 +252,7 @@ scripts/uninstall_autostart.ps1            # remove forever
 
 <div align="center">
 
-### ☕ Support PcRemote
+### ☕ Support LumiLink
 
 Built late at night, tested on a real laptop, signed, scanned and shipped.
 If it saved your eyes or your files —

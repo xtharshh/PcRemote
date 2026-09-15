@@ -48,8 +48,12 @@ class _BrightnessScreenState extends State<BrightnessScreen> {
                 label: 'Set brightness',
                 icon: Icons.brightness_6,
                 onTap: () async {
-                  await widget.api.setBrightness(_level.round());
-                  _msg('Set to ${_level.round()}%');
+                  try {
+                    await widget.api.setBrightness(_level.round());
+                    _msg('Set to ${_level.round()}%');
+                  } catch (e) {
+                    _msg(PcApi.friendlyError(e));
+                  }
                 },
               ),
               const SizedBox(height: 8),
@@ -57,8 +61,12 @@ class _BrightnessScreenState extends State<BrightnessScreen> {
                 label: 'Auto once',
                 icon: Icons.auto_awesome,
                 onTap: () async {
-                  final r = await widget.api.autoOnce();
-                  _msg('Auto → ${r['level']}% (${r['lux']} lux)');
+                  try {
+                    final r = await widget.api.autoOnce();
+                    _msg('Auto → ${r['level']}% (${r['lux']} lux)');
+                  } catch (e) {
+                    _msg(PcApi.friendlyError(e));
+                  }
                 },
               ),
               const SizedBox(height: 8),
@@ -68,7 +76,7 @@ class _BrightnessScreenState extends State<BrightnessScreen> {
                     final r = await widget.api.sense();
                     _msg('Sensor: ${r['lux']} lux via ${r['src']}');
                   } catch (e) {
-                    _msg('ERR: $e');
+                    _msg(PcApi.friendlyError(e));
                   }
                 },
                 icon: const Icon(Icons.light_mode),

@@ -87,13 +87,17 @@ class _ProfileCardState extends State<_ProfileCard> {
         });
       }
     } catch (e) {
-      if (mounted) _msg('ERR: $e');
+      if (mounted) _msg(PcApi.friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _save() async {
+    if (widget.name == 'admin') {
+      _msg('Admin always has full access — nothing to save.');
+      return;
+    }
     setState(() => _busy = true);
     try {
       final data = Map<String, dynamic>.from(_orig);
@@ -104,7 +108,7 @@ class _ProfileCardState extends State<_ProfileCard> {
       await widget.api.profileSave(widget.name, data);
       if (mounted) _msg('Saved ${widget.name}');
     } catch (e) {
-      if (mounted) _msg('ERR: $e');
+      if (mounted) _msg(PcApi.friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -120,7 +124,7 @@ class _ProfileCardState extends State<_ProfileCard> {
         _msg(start ? '${widget.name} started' : '${widget.name} stopped');
       }
     } catch (e) {
-      if (mounted) _msg('ERR: $e');
+      if (mounted) _msg(PcApi.friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -164,7 +168,45 @@ class _ProfileCardState extends State<_ProfileCard> {
                         padding: EdgeInsets.all(16),
                         child: CircularProgressIndicator(),
                       )
-                    : Column(
+                    : widget.name == 'admin'
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const ListTile(
+                                leading: Icon(Icons.verified_user),
+                                title: Text('Full access — everything allowed'),
+                                subtitle: Text(
+                                    'No blocked folders, settings or apps, no time limit. '
+                                    'Starting Admin removes all Guest/Kid blocks and stops watchers.'),
+                              ),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed:
+                                        _busy ? null : () => _startStop(true),
+                                    icon: const Icon(Icons.play_arrow, size: 18),
+                                    label: const Text('Start Admin (restore all)'),
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white),
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed:
+                                        _busy ? null : () => _startStop(false),
+                                    icon: const Icon(Icons.stop, size: 18),
+                                    label: const Text('Stop'),
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          )
+                        : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SectionTitle('Blocked Settings pages'),

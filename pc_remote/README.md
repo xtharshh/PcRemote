@@ -1,16 +1,22 @@
-# pc_remote
+# LumiLink (pc_remote)
 
-A new Flutter project.
+LumiLink — your PC, from your pocket: brightness, profiles & lock.
+
+Same name + same logo on Windows and Android. Package stays `pc_remote`
+(`com.owner.pc_remote`) so existing installs keep updating.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```powershell
+flutter pub get
+flutter analyze   # clean
+flutter test      # 3/3 pass
+flutter run       # install + launch (USB debugging on)
+flutter build apk --release   # keep-forever APK
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Release APK: `build/app/outputs/flutter-apk/app-release.apk`.
+Reinstall fresh so Android grants the LAN/WiFi permissions.
 
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,

@@ -47,7 +47,8 @@ class H(BaseHTTPRequestHandler):
                 pc = "PC"
             self._send({"brightness": get_brightness(), "lux": lux, "src": src,
                         "suggest": lux_to_brightness(lux), "log": recent(15),
-                        "pc": pc})
+                        "pc": pc,
+                        "auto": os.environ.get("PCREMOTE_AUTOBRIGHT", "1") == "1"})
             return
         if p == "/sense":
             cam, conf = estimate_lux()
@@ -103,6 +104,11 @@ class H(BaseHTTPRequestHandler):
             lvl = lux_to_brightness(lux)
             ok = set_brightness(lvl)
             log(f"auto:{lux:.0f}->{lvl}->{ok}"); self._send({"ok": ok, "level": lvl, "lux": lux}); return
+        if p == "/auto":
+            on = bool(body.get("on", True))
+            os.environ["PCREMOTE_AUTOBRIGHT"] = "1" if on else "0"
+            log(f"auto:{'on' if on else 'off'} by {ip}")
+            self._send({"ok": True, "auto": on}); return
         if p == "/guest-start":
             try:
                 out = G.apply_profile(body.get("name", "guest"))

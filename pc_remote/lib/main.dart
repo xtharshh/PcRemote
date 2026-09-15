@@ -6,35 +6,64 @@ import 'screens/home.dart';
 import 'screens/brightness.dart';
 import 'screens/profiles.dart';
 import 'screens/folders.dart';
+import 'widgets/ui.dart';
 
-void main() => runApp(const PcRemoteApp());
+void main() => runApp(const LumiLinkApp());
 
-class PcRemoteApp extends StatefulWidget {
-  const PcRemoteApp({super.key});
+/// LumiLink — one name + one logo on Windows and Android:
+/// brightness, profiles & lock, from your phone.
+class LumiLinkApp extends StatefulWidget {
+  const LumiLinkApp({super.key});
 
   @override
-  State<PcRemoteApp> createState() => _PcRemoteAppState();
+  State<LumiLinkApp> createState() => _LumiLinkAppState();
 }
 
-class _PcRemoteAppState extends State<PcRemoteApp> {
+// Keep the old name working for existing tests / imports.
+typedef PcRemoteApp = LumiLinkApp;
+
+class _LumiLinkAppState extends State<LumiLinkApp> {
   PcApi? _api;
   int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PC Remote',
+      title: 'LumiLink',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       home: _api == null
           ? GateScreen(onUnlock: (api) => setState(() => _api = api))
           : Scaffold(
-              appBar: AppBar(title: const Text('PC Remote')),
+              appBar: AppBar(
+                leading: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: AppLogo(size: 32),
+                ),
+                title: Text(_api!.displayName.isEmpty
+                    ? 'LumiLink'
+                    : 'LumiLink · ${_api!.displayName}'),
+                actions: [
+                  IconButton(
+                    tooltip: 'Change PC',
+                    icon: const Icon(Icons.wifi_find),
+                    onPressed: () => setState(() {
+                      _api = null;
+                      _tab = 0;
+                    }),
+                  ),
+                ],
+              ),
               body: IndexedStack(
                 index: _tab,
                 children: [
-                  HomeScreen(api: _api!),
+                  HomeScreen(
+                      api: _api!,
+                      onChangePc: () => setState(() {
+                            _api = null;
+                            _tab = 0;
+                          })),
                   BrightnessScreen(api: _api!),
                   ProfilesScreen(api: _api!),
                   FoldersScreen(api: _api!),

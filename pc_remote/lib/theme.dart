@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Material 3 seed theme for PC Remote (dark-first design).
+/// Material 3 seed theme for LumiLink (dark-first design).
 class AppTheme {
   static const seed = Colors.indigo;
 

@@ -39,7 +39,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
       });
       if (_drive != null) _browse(_drive!);
     } catch (e) {
-      _msg('ERR: $e');
+      _msg(PcApi.friendlyError(e));
     }
   }
 
@@ -53,7 +53,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
         _sel.clear();
       });
     } catch (e) {
-      _msg('ERR: $e');
+      _msg(PcApi.friendlyError(e));
     }
   }
 
@@ -64,6 +64,10 @@ class _FoldersScreenState extends State<FoldersScreen> {
   }
 
   Future<void> _add() async {
+    if (_target == 'admin') {
+      _msg('Admin has full access — nothing to block. Pick guest or kid.');
+      return;
+    }
     if (_sel.isEmpty) return;
     setState(() => _busy = true);
     try {
@@ -78,7 +82,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
         _msg('Added to $_target — Start it in Profiles');
       }
     } catch (e) {
-      _msg('ERR: $e');
+      _msg(PcApi.friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -87,6 +91,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
   void _msg(String s) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
   }
+
+  bool get _isAdmin => _target == 'admin';
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +108,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
           child: Row(
-            children: ['guest', 'kid'].map((p) => Padding(
+            children: ['admin', 'guest', 'kid'].map((p) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
                     label: Text(p),
@@ -112,6 +118,18 @@ class _FoldersScreenState extends State<FoldersScreen> {
                 )).toList(),
           ),
         ),
+        if (_isAdmin)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Card(
+              child: ListTile(
+                leading: Icon(Icons.admin_panel_settings),
+                title: Text('Admin · full access'),
+                subtitle: Text(
+                    'Owner profile: every folder, setting & app is allowed. Starting Admin clears all blocks.'),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

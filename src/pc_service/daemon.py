@@ -74,20 +74,19 @@ def run_brightness():
     from autobrightness.core.fusion import fuse
     from autobrightness.core.curve import lux_to_brightness, Smoother
     from autobrightness.drivers.wmi_brightness import get_brightness, set_brightness
-    if os.environ.get("PCREMOTE_AUTOBRIGHT", "1") != "1":
-        return
     sm = Smoother()
     interval = int(os.environ.get("PCREMOTE_BRIGHT_INTERVAL", "8"))
-    dlog("auto-brightness on")
+    dlog("auto-brightness thread on (toggle via POST /auto)")
     while True:
         try:
-            lux, _ = fuse(None, 0.0, synthetic_lux())
-            target = lux_to_brightness(lux)
-            cur = get_brightness()
-            nxt = sm.next(target)
-            if nxt is not None and cur is not None and abs(nxt - cur) >= 4:
-                set_brightness(nxt)
-                dlog(f"bright {cur}->{nxt} (lux {lux:.0f})")
+            if os.environ.get("PCREMOTE_AUTOBRIGHT", "1") == "1":
+                lux, _ = fuse(None, 0.0, synthetic_lux())
+                target = lux_to_brightness(lux)
+                cur = get_brightness()
+                nxt = sm.next(target)
+                if nxt is not None and cur is not None and abs(nxt - cur) >= 4:
+                    set_brightness(nxt)
+                    dlog(f"bright {cur}->{nxt} (lux {lux:.0f})")
         except Exception as e:
             dlog("bright-err " + str(e)[:200])
         time.sleep(interval)

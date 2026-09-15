@@ -24,6 +24,71 @@ class ResponsiveCard extends StatelessWidget {
   }
 }
 
+/// LumiLink logo: sun/brightness + link, drawn with code so it matches
+/// on Android, Windows and in-app without binary assets.
+/// Same mark everywhere: rounded indigo→teal tile, amber sun, link arc.
+class AppLogo extends StatelessWidget {
+  final double size;
+  const AppLogo({super.key, this.size = 64});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'LumiLink logo',
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(painter: _LogoPainter()),
+      ),
+    );
+  }
+}
+
+class _LogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.shortestSide;
+    final rect = Rect.fromLTWH(0, 0, r, r);
+    // Tile: indigo -> teal gradient, rounded.
+    final tile = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF4F46E5), Color(0xFF0D9488)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(rect);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(r * 0.24)), tile);
+    final cx = r / 2, cy = r * 0.44;
+    // Sun core.
+    canvas.drawCircle(
+        Offset(cx, cy), r * 0.15, Paint()..color = const Color(0xFFFFC53D));
+    // Sun rays.
+    final ray = Paint()
+      ..color = const Color(0xFFFFC53D)
+      ..strokeWidth = r * 0.045
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 8; i++) {
+      final a = i * math.pi / 4;
+      final p1 = Offset(cx + (r * 0.22) * math.cos(a), cy + (r * 0.22) * math.sin(a));
+      final p2 = Offset(cx + (r * 0.30) * math.cos(a), cy + (r * 0.30) * math.sin(a));
+      canvas.drawLine(p1, p2, ray);
+    }
+    // Link arc under the sun.
+    final link = Paint()
+      ..color = Colors.white
+      ..strokeWidth = r * 0.06
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy + r * 0.34), radius: r * 0.20),
+        math.pi * 0.15, math.pi * 0.7, false, link);
+    canvas.drawCircle(Offset(cx - r * 0.20, cy + r * 0.30), r * 0.05, Paint()..color = Colors.white);
+    canvas.drawCircle(Offset(cx + r * 0.20, cy + r * 0.30), r * 0.05, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
 /// Small section heading used across screens.
 class SectionTitle extends StatelessWidget {
   final String text;
