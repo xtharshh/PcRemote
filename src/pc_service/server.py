@@ -14,6 +14,20 @@ from pc_service.activity import log, recent
 PHONE_PIN = os.environ.get("PCREMOTE_PIN", "1234")
 NONCE = {}  # ip -> last approval note (replay guard minimal for v2)
 
+# Single-active profile: only one of admin/guest/kid runs at a time.
+# Starting a new profile automatically stops the previous one.
+ACTIVE = {"name": None, "since": None}
+
+def _clear_active(name=None):
+    if name is None or ACTIVE.get("name") == name:
+        ACTIVE["name"] = None
+        ACTIVE["since"] = None
+
+def _guest():
+    from pc_service import guest as G
+    G.ON_ACTIVE_CLEAR = _clear_active  # time-limit expiry clears ACTIVE too
+    return G
+
 def check_pin(h) -> bool:
     return h.get("X-PIN") == PHONE_PIN
 
@@ -45,10 +59,13 @@ class H(BaseHTTPRequestHandler):
                 pc = socket.gethostname()
             except Exception:
                 pc = "PC"
-            self._send({"brightness": get_brightness(), "lux": lux, "src": src,
+            bri = get_brightness()
+            self._send({"brightness": bri, "lux": lux, "src": src,
                         "suggest": lux_to_brightness(lux), "log": recent(15),
                         "pc": pc,
-                        "auto": os.environ.get("PCREMOTE_AUTOBRIGHT", "1") == "1"})
+                        "auto": os.environ.get("PCREMOTE_AUTOBRIGHT", "1") == "1",
+                        "active": ACTIVE.get("name"),
+                        "supported": bri is not None})
             return
         if p == "/sense":
             cam, conf = estimate_lux()
@@ -98,11 +115,17 @@ class H(BaseHTTPRequestHandler):
             return
         if p == "/brightness":
             ok = set_brightness(int(body.get("level", 50)))
+            if not ok:
+                log(f"brightness:{body.get('level')}->FAILED (display unsupported?)")
+                self._send({"ok": False, "err": "Display brightness not supported here (laptop internal display only; external monitors need DDC/CI)."}); return
             log(f"brightness:{body.get('level')}->{ok}"); self._send({"ok": ok}); return
         if p == "/auto-once":
             lux, src = fuse(None, 0.0, synthetic_lux())
             lvl = lux_to_brightness(lux)
             ok = set_brightness(lvl)
+            if not ok:
+                log(f"auto:{lux:.0f}->{lvl}->FAILED (display unsupported?)")
+                self._send({"ok": False, "err": "Display brightness not supported here (laptop internal display only; external monitors need DDC/CI).", "level": lvl, "lux": lux}); return
             log(f"auto:{lux:.0f}->{lvl}->{ok}"); self._send({"ok": ok, "level": lvl, "lux": lux}); return
         if p == "/auto":
             on = bool(body.get("on", True))
@@ -111,14 +134,34 @@ class H(BaseHTTPRequestHandler):
             self._send({"ok": True, "auto": on}); return
         if p == "/guest-start":
             try:
-                out = G.apply_profile(body.get("name", "guest"))
-                self._send({"ok": True, "out": str(out)[:3000]}); return
+                import datetime
+                G = _guest()
+                name = body.get("name", "guest")
+                stopped = None
+                prev = ACTIVE.get("name")
+                if prev and prev != name:
+                    try:
+                        G.stop_profile(prev)
+                    except Exception:
+                        pass
+                    stopped = prev
+                out = G.apply_profile(name)
+                ACTIVE["name"] = name
+                ACTIVE["since"] = datetime.datetime.now().isoformat(timespec="seconds")
+                log(f"guest-start:{name}" + (f" (auto-stopped {stopped})" if stopped else ""))
+                self._send({"ok": True, "active": name, "stopped": stopped,
+                            "out": str(out)[:3000]}); return
             except Exception as e:
                 self._send({"ok": False, "err": str(e)}, 500); return
         if p == "/guest-stop":
             try:
-                out = G.stop_profile(body.get("name", "guest"))
-                self._send({"ok": True, "out": str(out)[:3000]}); return
+                G = _guest()
+                name = body.get("name", "guest")
+                out = G.stop_profile(name)
+                if ACTIVE.get("name") == name:
+                    _clear_active(name)
+                self._send({"ok": True, "active": ACTIVE.get("name"),
+                            "out": str(out)[:3000]}); return
             except Exception as e:
                 self._send({"ok": False, "err": str(e)}, 500); return
         if p == "/profile-save":

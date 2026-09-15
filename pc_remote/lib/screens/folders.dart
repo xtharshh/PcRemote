@@ -69,6 +69,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
       return;
     }
     if (_sel.isEmpty) return;
+    final added = _sel.toList();
     setState(() => _busy = true);
     try {
       final cur = await widget.api.profileGet(_target);
@@ -77,12 +78,48 @@ class _FoldersScreenState extends State<FoldersScreen> {
           ((data['folders_deny'] as List?)?.cast<String>() ?? []);
       data['folders_deny'] = {...list, ..._sel}.toList();
       await widget.api.profileSave(_target, data);
-      if (mounted) {
-        setState(() => _sel.clear());
-        _msg('Added to $_target — Start it in Profiles');
+      if (!mounted) return;
+      setState(() => _sel.clear());
+      // Blocks only take effect once the profile runs — offer to
+      // start it right away so the folders actually get blocked.
+      final start = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text('${added.length} saved to $_target'),
+          content: Text(
+              'Blocking starts when the profile runs. Start $_target now?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Later'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Start now'),
+            ),
+          ],
+        ),
+      );
+      if (start == true && mounted) {
+        setState(() => _busy = true);
+        try {
+          final r = await widget.api.guestStart(_target);
+          final stopped = r['stopped'];
+          if (mounted) {
+            _msg(stopped == null
+                ? '$_target active — folders blocked'
+                : '$_target active ($stopped stopped) — folders blocked');
+          }
+        } catch (e) {
+          if (mounted) _msg(PcApi.friendlyError(e));
+        } finally {
+          if (mounted) setState(() => _busy = false);
+        }
+      } else if (mounted) {
+        _msg('Saved to $_target — Start it in Profiles to block');
       }
     } catch (e) {
-      _msg(PcApi.friendlyError(e));
+      if (mounted) _msg(PcApi.friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

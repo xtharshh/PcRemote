@@ -1,7 +1,7 @@
 name: pc_remote
-description: LumiLink — your PC, from your pocket. Brightness, profiles & lock.
+description: Lumen Desk — your PC, from your pocket. Brightness, profiles & lock.
 publish_to: "none"
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -12,6 +12,14 @@ dependencies:
   http: ^1.2.0
   local_auth: ^2.1.0
   flutter_secure_storage: ^9.0.0
+
+# Vendored flutter_secure_storage_windows with ATL-free C++ (CA2W/CW2A
+# replaced by Win32 converters) so the Windows build works with plain
+# VS Build Tools, which don't ship atlstr.h. Same version (3.1.2),
+# same behavior — only the string conversion changed.
+dependency_overrides:
+  flutter_secure_storage_windows:
+    path: plugins/flutter_secure_storage_windows
 
 dev_dependencies:
   flutter_test:

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "LumiLink" "\0"
-            VALUE "FileDescription", "LumiLink" "\0"
+            VALUE "CompanyName", "Lumen Desk" "\0"
+            VALUE "FileDescription", "Lumen Desk" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "LumiLink" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 LumiLink. All rights reserved." "\0"
-            VALUE "OriginalFilename", "LumiLink.exe" "\0"
-            VALUE "ProductName", "LumiLink" "\0"
+            VALUE "InternalName", "LumenDesk" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Lumen Desk. All rights reserved." "\0"
+            VALUE "OriginalFilename", "LumenDesk.exe" "\0"
+            VALUE "ProductName", "Lumen Desk" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

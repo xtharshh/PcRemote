@@ -17,8 +17,11 @@ const _appPresets = [
   'steam.exe',
 ];
 
-/// Profiles tab: one visual card per profile, tap to expand a
-/// no-JSON editor (chips + slider + folder list). Start/Stop per card.
+const _allProfiles = ['admin', 'guest', 'kid'];
+
+/// Profiles tab: one clean card per profile. Only ONE profile runs at a
+/// time — the server auto-stops the previous one when a new one starts.
+/// The active card wears an ACTIVE badge; the rest offer Start / Switch.
 class ProfilesScreen extends StatefulWidget {
   final PcApi api;
   const ProfilesScreen({super.key, required this.api});
@@ -28,20 +31,61 @@ class ProfilesScreen extends StatefulWidget {
 }
 
 class _ProfilesScreenState extends State<ProfilesScreen> {
+  String? _active;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshActive();
+  }
+
+  Future<void> _refreshActive() async {
+    try {
+      final s = await widget.api.status();
+      if (mounted) setState(() => _active = s['active'] as String?);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(8),
-      children: [
-        _ProfileCard(
-            name: 'admin',
-            icon: Icons.admin_panel_settings,
-            api: widget.api),
-        _ProfileCard(
-            name: 'guest', icon: Icons.person_outline, api: widget.api),
-        _ProfileCard(
-            name: 'kid', icon: Icons.child_care, api: widget.api),
-      ],
+    return RefreshIndicator(
+      onRefresh: _refreshActive,
+      child: ListView(
+        padding: const EdgeInsets.all(8),
+        children: [
+          if (_active != null)
+            ResponsiveCard(
+              child: Row(
+                children: [
+                  const Icon(Icons.verified_user,
+                      color: Colors.green, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${_active!.toUpperCase()} is active — others are stopped',
+                      style:
+                          const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          for (final name in _allProfiles)
+            _ProfileCard(
+              key: ValueKey(name),
+              name: name,
+              icon: name == 'admin'
+                  ? Icons.admin_panel_settings
+                  : name == 'kid'
+                      ? Icons.child_care
+                      : Icons.person_outline,
+              api: widget.api,
+              isActive: _active == name,
+              otherActive: _active != null && _active != name,
+              onChanged: _refreshActive,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -50,8 +94,17 @@ class _ProfileCard extends StatefulWidget {
   final String name;
   final IconData icon;
   final PcApi api;
+  final bool isActive;
+  final bool otherActive;
+  final Future<void> Function() onChanged;
   const _ProfileCard(
-      {required this.name, required this.icon, required this.api});
+      {super.key,
+      required this.name,
+      required this.icon,
+      required this.api,
+      required this.isActive,
+      required this.otherActive,
+      required this.onChanged});
 
   @override
   State<_ProfileCard> createState() => _ProfileCardState();
@@ -67,6 +120,8 @@ class _ProfileCardState extends State<_ProfileCard> {
   Set<String> _apps = {};
   final _customApp = TextEditingController();
   double _minutes = 0;
+
+  bool get _isAdmin => widget.name == 'admin';
 
   Future<void> _load() async {
     setState(() => _busy = true);
@@ -93,8 +148,16 @@ class _ProfileCardState extends State<_ProfileCard> {
     }
   }
 
+  void _toggle() {
+    setState(() {
+      _open = !_open;
+      if (!_open) _loaded = false; // always show fresh data next time
+    });
+    if (_open) _load();
+  }
+
   Future<void> _save() async {
-    if (widget.name == 'admin') {
+    if (_isAdmin) {
       _msg('Admin always has full access — nothing to save.');
       return;
     }
@@ -114,15 +177,30 @@ class _ProfileCardState extends State<_ProfileCard> {
     }
   }
 
-  Future<void> _startStop(bool start) async {
+  Future<void> _start() async {
     setState(() => _busy = true);
     try {
-      await (start
-          ? widget.api.guestStart(widget.name)
-          : widget.api.guestStop(widget.name));
+      final r = await widget.api.guestStart(widget.name);
+      final stopped = r['stopped'];
       if (mounted) {
-        _msg(start ? '${widget.name} started' : '${widget.name} stopped');
+        _msg(stopped == null
+            ? '${widget.name} is now active'
+            : '${widget.name} is now active ($stopped stopped)');
       }
+      await widget.onChanged();
+    } catch (e) {
+      if (mounted) _msg(PcApi.friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _stop() async {
+    setState(() => _busy = true);
+    try {
+      await widget.api.guestStop(widget.name);
+      if (mounted) _msg('${widget.name} stopped — no profile active');
+      await widget.onChanged();
     } catch (e) {
       if (mounted) _msg(PcApi.friendlyError(e));
     } finally {
@@ -139,202 +217,252 @@ class _ProfileCardState extends State<_ProfileCard> {
     final accent = AppTheme.profileAccent(widget.name);
     return ResponsiveCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: accent.withValues(alpha: 0.2),
-              child: Icon(widget.icon, color: accent),
+          // ---- header (identical layout for every card) ----
+          InkWell(
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: accent.withValues(alpha: 0.15),
+                    child: Icon(widget.icon, color: accent),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(widget.name.toUpperCase(),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16)),
+                            if (widget.isActive) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('ACTIVE',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isAdmin
+                              ? 'Owner · everything allowed'
+                              : '${_folders.length} folders · ${_minutes.round()} min limit',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(_open ? Icons.expand_less : Icons.expand_more),
+                ],
+              ),
             ),
-            title: Text(widget.name.toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              widget.name == 'admin'
-                  ? 'Owner · full access'
-                  : '${_folders.length} folders · ${_minutes.round()} min',
-            ),
-            trailing: Icon(_open ? Icons.expand_less : Icons.expand_more),
-            onTap: () {
-              setState(() => _open = !_open);
-              if (_open && !_loaded) _load();
-            },
           ),
-          AnimatedContainer(
+          // ---- actions (always visible, same order) ----
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _busy ? null : _start,
+                  icon: const Icon(Icons.play_arrow, size: 18),
+                  label: Text(widget.isActive
+                      ? 'Restart'
+                      : widget.otherActive
+                          ? 'Switch'
+                          : 'Start'),
+                  style: widget.isActive
+                      ? null
+                      : ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (_busy || !widget.isActive) ? null : _stop,
+                  icon: const Icon(Icons.stop, size: 18),
+                  label: const Text('Stop'),
+                ),
+              ),
+            ],
+          ),
+          // ---- editor (expands below, same rhythm) ----
+          AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
-            height: _open ? null : 0,
             child: _open
                 ? (_busy && !_loaded
                     ? const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                            child: CircularProgressIndicator()),
                       )
-                    : widget.name == 'admin'
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const ListTile(
-                                leading: Icon(Icons.verified_user),
-                                title: Text('Full access — everything allowed'),
-                                subtitle: Text(
-                                    'No blocked folders, settings or apps, no time limit. '
-                                    'Starting Admin removes all Guest/Kid blocks and stops watchers.'),
-                              ),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed:
-                                        _busy ? null : () => _startStop(true),
-                                    icon: const Icon(Icons.play_arrow, size: 18),
-                                    label: const Text('Start Admin (restore all)'),
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white),
-                                  ),
-                                  ElevatedButton.icon(
-                                    onPressed:
-                                        _busy ? null : () => _startStop(false),
-                                    icon: const Icon(Icons.stop, size: 18),
-                                    label: const Text('Stop'),
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                          )
-                        : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SectionTitle('Blocked Settings pages'),
-                          Wrap(
-                            spacing: 8,
-                            children: _settingsPages
-                                .map((p) => FilterChip(
-                                      label: Text(p),
-                                      selected: _settings.contains(p),
-                                      onSelected: (on) => setState(() =>
-                                          on
-                                              ? _settings.add(p)
-                                              : _settings.remove(p)),
-                                    ))
-                                .toList(),
-                          ),
-                          const SectionTitle('Blocked apps'),
-                          Wrap(
-                            spacing: 8,
-                            children: _appPresets
-                                .map((a) => FilterChip(
-                                      label: Text(a),
-                                      selected: _apps.contains(a),
-                                      onSelected: (on) => setState(() =>
-                                          on
-                                              ? _apps.add(a)
-                                              : _apps.remove(a)),
-                                    ))
-                                .toList(),
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _customApp,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Custom app .exe',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: 'Add app',
-                                onPressed: () {
-                                  final v =
-                                      _customApp.text.trim().toLowerCase();
-                                  if (v.isNotEmpty) {
-                                    setState(() {
-                                      _apps.add(v);
-                                      _customApp.clear();
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.add_circle),
-                              ),
-                            ],
-                          ),
-                          ..._apps
-                              .where((a) => !_appPresets.contains(a))
-                              .map((a) => Chip(
-                                    label: Text(a),
-                                    onDeleted: () =>
-                                        setState(() => _apps.remove(a)),
-                                  )),
-                          const SectionTitle('Blocked folders'),
-                          if (_folders.isEmpty)
-                            const Text('None — pick some in the Folders tab'),
-                          ..._folders.map((f) => ListTile(
-                                dense: true,
-                                leading:
-                                    const Icon(Icons.folder, size: 20),
-                                title: Text(f,
-                                    style:
-                                        const TextStyle(fontSize: 13)),
-                                trailing: IconButton(
-                                  tooltip: 'Remove',
-                                  icon: const Icon(Icons.delete, size: 20),
-                                  onPressed: () =>
-                                      setState(() => _folders.remove(f)),
-                                ),
-                              )),
-                          const SectionTitle(
-                              'Time limit (0 = no limit)'),
-                          Slider(
-                            value: _minutes.clamp(0, 180),
-                            min: 0,
-                            max: 180,
-                            divisions: 12,
-                            label: '${_minutes.round()} min',
-                            onChanged: (v) =>
-                                setState(() => _minutes = v),
-                          ),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: _busy ? null : _save,
-                                icon: const Icon(Icons.save, size: 18),
-                                label: const Text('Save'),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed:
-                                    _busy ? null : () => _startStop(true),
-                                icon: const Icon(Icons.play_arrow, size: 18),
-                                label: const Text('Start'),
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed:
-                                    _busy ? null : () => _startStop(false),
-                                icon: const Icon(Icons.stop, size: 18),
-                                label: const Text('Stop'),
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ))
-                : const SizedBox.shrink(),
+                    : _isAdmin
+                        ? const _AdminPanel()
+                        : _editor(context))
+                : const SizedBox(width: double.infinity, height: 0),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _editor(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Label('Blocked settings pages'),
+        Wrap(
+          spacing: 8,
+          children: _settingsPages
+              .map((p) => FilterChip(
+                    label: Text(p),
+                    selected: _settings.contains(p),
+                    onSelected: (on) => setState(() =>
+                        on ? _settings.add(p) : _settings.remove(p)),
+                  ))
+              .toList(),
+        ),
+        const _Label('Blocked apps'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: _appPresets
+              .map((a) => FilterChip(
+                    label: Text(a),
+                    selected: _apps.contains(a),
+                    onSelected: (on) => setState(
+                        () => on ? _apps.add(a) : _apps.remove(a)),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _customApp,
+                decoration: const InputDecoration(
+                  labelText: 'Custom app .exe',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: 'Add app',
+              onPressed: () {
+                final v = _customApp.text.trim().toLowerCase();
+                if (v.isNotEmpty) {
+                  setState(() {
+                    _apps.add(v);
+                    _customApp.clear();
+                  });
+                }
+              },
+              icon: const Icon(Icons.add_circle),
+            ),
+          ],
+        ),
+        Wrap(
+          spacing: 8,
+          children: _apps
+              .where((a) => !_appPresets.contains(a))
+              .map((a) => Chip(
+                    label: Text(a),
+                    onDeleted: () =>
+                        setState(() => _apps.remove(a)),
+                  ))
+              .toList(),
+        ),
+        _Label('Blocked folders (${_folders.length})'),
+        if (_folders.isEmpty)
+          const Text('None — add some from the Folders tab'),
+        ..._folders.map((f) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.folder, size: 20),
+              title: Text(f, style: const TextStyle(fontSize: 13)),
+              trailing: IconButton(
+                tooltip: 'Remove',
+                icon: const Icon(Icons.delete, size: 20),
+                onPressed: () =>
+                    setState(() => _folders.remove(f)),
+              ),
+            )),
+        _Label('Time limit (${_minutes.round()} min · 0 = none)'),
+        Slider(
+          value: _minutes.clamp(0, 180),
+          min: 0,
+          max: 180,
+          divisions: 12,
+          label: '${_minutes.round()} min',
+          onChanged: (v) => setState(() => _minutes = v),
+        ),
+        const SizedBox(height: 4),
+        ElevatedButton.icon(
+          onPressed: _busy ? null : _save,
+          icon: const Icon(Icons.save, size: 18),
+          label: const Text('Save changes'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Small uppercase section label — same everywhere.
+class _Label extends StatelessWidget {
+  final String text;
+  const _Label(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 6),
+      child: Text(text.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+    );
+  }
+}
+
+/// Admin has no block lists — starting it restores full access.
+class _AdminPanel extends StatelessWidget {
+  const _AdminPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 12),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(Icons.verified_user,
+            color: Colors.indigoAccent, size: 32),
+        title: Text('Full access — everything allowed'),
+        subtitle: Text(
+            'No blocked folders, settings or apps, no time limit. '
+            'Starting Admin stops any active Guest/Kid profile and '
+            'removes all blocks.'),
       ),
     );
   }

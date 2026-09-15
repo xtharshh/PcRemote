@@ -122,7 +122,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.auto_awesome,
                   onTap: () async {
                     try {
-                      await widget.api.autoOnce();
+                      final r = await widget.api.autoOnce();
+                      if (r['ok'] == false) {
+                        _msg((r['err'] ?? 'Auto failed').toString());
+                      }
                       await _refresh();
                     } catch (e) {
                       _msg(PcApi.friendlyError(e));

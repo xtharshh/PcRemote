@@ -6,6 +6,10 @@ from winutil import run as _run
 USERS = {"admin": None, "guest": "PC-Guest", "kid": "PC-Kid"}
 BASE = os.path.join(os.path.dirname(__file__), "..", "..", "profiles")
 
+# Set by server.py: called whenever a profile fully stops (manual stop,
+# switch, or time-limit expiry) so the single-active tracker stays true.
+ON_ACTIVE_CLEAR = None
+
 def _ps(cmd: str) -> str:
     r = _run(["powershell", "-NoProfile", "-Command", cmd],
              capture_output=True, text=True, timeout=30)
@@ -110,4 +114,9 @@ def stop_profile(name: str = "guest") -> dict:
         pass
     out["user"] = disable_user(name)
     log(f"guest-stop:{name}")
+    try:
+        if ON_ACTIVE_CLEAR is not None:
+            ON_ACTIVE_CLEAR(name)
+    except Exception:
+        pass
     return out

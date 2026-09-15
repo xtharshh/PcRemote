@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Material 3 seed theme for LumiLink (dark-first design).
+/// Material 3 seed theme for Lumen Desk (dark-first design).
 class AppTheme {
   static const seed = Colors.indigo;
 

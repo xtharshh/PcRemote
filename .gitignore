@@ -8,6 +8,8 @@ build/
 profiles/activity.log
 profiles/daemon.log
 *.log
+# installer output (build artifact — rebuild via installer/)
+installer/dist/
 # release signing: never commit keys
 *.jks
 *.keystore

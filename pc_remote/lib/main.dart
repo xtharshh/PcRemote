@@ -8,28 +8,29 @@ import 'screens/profiles.dart';
 import 'screens/folders.dart';
 import 'widgets/ui.dart';
 
-void main() => runApp(const LumiLinkApp());
+void main() => runApp(const LumenDeskApp());
 
-/// LumiLink — one name + one logo on Windows and Android:
+/// Lumen Desk — one name + one mark on Windows and Android:
 /// brightness, profiles & lock, from your phone.
-class LumiLinkApp extends StatefulWidget {
-  const LumiLinkApp({super.key});
+class LumenDeskApp extends StatefulWidget {
+  const LumenDeskApp({super.key});
 
   @override
-  State<LumiLinkApp> createState() => _LumiLinkAppState();
+  State<LumenDeskApp> createState() => _LumenDeskAppState();
 }
 
-// Keep the old name working for existing tests / imports.
-typedef PcRemoteApp = LumiLinkApp;
+// Keep the old names working for existing tests / imports.
+typedef LumiLinkApp = LumenDeskApp;
+typedef PcRemoteApp = LumenDeskApp;
 
-class _LumiLinkAppState extends State<LumiLinkApp> {
+class _LumenDeskAppState extends State<LumenDeskApp> {
   PcApi? _api;
   int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LumiLink',
+      title: 'Lumen Desk',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
@@ -42,8 +43,8 @@ class _LumiLinkAppState extends State<LumiLinkApp> {
                   child: AppLogo(size: 32),
                 ),
                 title: Text(_api!.displayName.isEmpty
-                    ? 'LumiLink'
-                    : 'LumiLink · ${_api!.displayName}'),
+                    ? 'Lumen Desk'
+                    : 'Lumen Desk · ${_api!.displayName}'),
                 actions: [
                   IconButton(
                     tooltip: 'Change PC',

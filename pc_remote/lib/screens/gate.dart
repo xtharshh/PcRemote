@@ -11,7 +11,7 @@ import '../widgets/ui.dart';
 
 /// Phone-local gate: PIN + fingerprint + WiFi auto-find.
 /// Nothing secret leaves the phone.
-/// App name: LumiLink (same logo + name on Windows + Android).
+/// App name: Lumen Desk (same mark + name on Windows + Android).
 class GateScreen extends StatefulWidget {
   final void Function(PcApi api) onUnlock;
   const GateScreen({super.key, required this.onUnlock});
@@ -84,7 +84,7 @@ class _GateScreenState extends State<GateScreen> {
     final auth = LocalAuthentication();
     try {
       final ok = await auth.authenticate(
-        localizedReason: 'Unlock LumiLink',
+        localizedReason: 'Unlock Lumen Desk',
         options: const AuthenticationOptions(biometricOnly: false),
       );
       if (ok) _open();
@@ -232,7 +232,7 @@ class _GateScreenState extends State<GateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('LumiLink')),
+      appBar: AppBar(title: const Text('Lumen Desk')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -244,7 +244,7 @@ class _GateScreenState extends State<GateScreen> {
                 const Center(child: AppLogo(size: 88)),
                 const SizedBox(height: 8),
                 Center(
-                  child: Text('LumiLink',
+                  child: Text('Lumen Desk',
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall

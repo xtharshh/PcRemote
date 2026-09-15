@@ -1,9 +1,10 @@
-# LumiLink (pc_remote)
+# Lumen Desk (pc_remote)
 
-LumiLink — your PC, from your pocket: brightness, profiles & lock.
+Lumen Desk — your PC, from your pocket: brightness, profiles & lock.
 
-Same name + same logo on Windows and Android. Package stays `pc_remote`
-(`com.owner.pc_remote`) so existing installs keep updating.
+Same name + same mark on Windows (`LumenDesk.exe`) and Android.
+Package stays `pc_remote` (`com.owner.pc_remote`) so existing
+installs keep updating.
 
 ## Getting Started
 

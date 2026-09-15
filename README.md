@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🖥️📱 LumiLink
+# 🖥️📱 Lumen Desk
 
 ### Your Windows PC, remotely yours — brightness, profiles & lock, from your phone.
 
@@ -10,14 +10,14 @@
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 Windows never got Mac-style auto-brightness, Apple-Watch-style phone unlock,
-or per-person profiles you control from your pocket. **LumiLink fixes all three**
+or per-person profiles you control from your pocket. **Lumen Desk fixes all three**
 with small modules sharing one sensor + service stack.
 
 <a href="https://www.buymeacoffee.com/xtharshh">
 <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" />
 </a>
 
-*If LumiLink saved your eyes or your privacy, consider fueling the next feature. ☕*
+*If Lumen Desk saved your eyes or your privacy, consider fueling the next feature. ☕*
 
 </div>
 
@@ -79,6 +79,17 @@ tests/test_curve.py
 
 ## 🚀 PC setup
 
+### Easy install (recommended for anyone)
+Run **`installer/dist/LumenDesk-Setup-1.2.0.exe`** (rebuild it anytime with
+`iscc installer\LumenDesk.iss` — needs Python 3.11+ with "Add to PATH").
+The wizard asks for a phone PIN + port, then it installs the service,
+starts it at every logon (no window), opens the firewall for your phone,
+and optionally adds the Lumen Desk Windows companion app. Uninstalling
+from "Add or remove programs" stops everything and cleans up the task,
+firewall rule and files.
+
+### Manual setup (developers)
+
 ### Requirements
 - Windows 10/11 · Python 3.11+ (`python --version`) · same WiFi for PC + phone
 - Optional: `pip install opencv-python` (webcam light sensor)
@@ -138,17 +149,19 @@ npm install
 npx expo start        # scan QR with Expo Go (Play Store), same WiFi
 ```
 
-## 💙 LumiLink app (recommended) — `pc_remote/`
+## 💙 Lumen Desk app (recommended) — `pc_remote/`
 
 Skill-built UI (seed Material 3, composed widgets, implicit animations,
 `ListView.builder`, `Semantics`, responsive cards):
 gate with fingerprint + **Find my PC on WiFi** (UDP beacon with HTTP
 subnet-sweep fallback, zero typing), Home shows the **PC name on WiFi**,
 dashboard with animated brightness ring + auto-brightness toggle +
-lock/unlock + activity timeline, brightness slider,
+lock/unlock + activity timeline, brightness slider that **applies on
+release and reports what the PC actually did**, **one active profile
+at a time** (starting a new one auto-stops the old; ACTIVE badge),
 **visual profile editor** (chips + sliders, no JSON, incl. **Admin —
-full access**), folder picker with search that saves straight into
-a profile.
+full access**), folder picker with search that saves into a profile
+and offers **Start now** so blocks take effect immediately.
 
 ```powershell
 Set-Location pc_remote
@@ -160,10 +173,13 @@ flutter run              # install + launch
 flutter build apk --release   # keep-forever APK
 ```
 
-**Signed release APK** already built (v1.1.0):
+**Signed release APK** already built (v1.2.0):
 `pc_remote/build/app/outputs/flutter-apk/app-release.apk` (50 MB).
 Reinstall fresh so Android grants the LAN/WiFi permissions
 (same WiFi, allow WiFi/location when asked).
+
+**Windows companion** `LumenDesk.exe` (same name + mark):
+`pc_remote/build/windows/x64/runner/Release/`.
 
 Release signing: `pc_remote/android/key.properties` + `.jks` are gitignored —
 generate your own with `keytool -genkeypair` (see
@@ -252,7 +268,7 @@ scripts/uninstall_autostart.ps1            # remove forever
 
 <div align="center">
 
-### ☕ Support LumiLink
+### ☕ Support Lumen Desk
 
 Built late at night, tested on a real laptop, signed, scanned and shipped.
 If it saved your eyes or your files —

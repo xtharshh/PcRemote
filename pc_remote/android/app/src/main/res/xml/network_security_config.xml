@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- LumiLink talks to your PC over plain HTTP on your own LAN
+<!-- Lumen Desk talks to your PC over plain HTTP on your own LAN
      (never the internet). Allow cleartext only to private ranges. -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
