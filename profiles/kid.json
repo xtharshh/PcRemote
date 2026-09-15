@@ -1,0 +1,9 @@
+{
+  "name": "kid",
+  "windows_user": "PC-Kid",
+  "folders_deny": [],
+  "settings_hide": "accounts;bluetooth;windowsupdate;recovery;apps",
+  "apps_deny": ["regedit.exe", "powershell.exe", "cmd.exe", "steam.exe"],
+  "time_minutes": 60,
+  "note": "Strict + 60 min auto logoff."
+}

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "PC Remote",
+    "slug": "pcremote",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.owner.pcremote",
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
+    }
+  }
+}

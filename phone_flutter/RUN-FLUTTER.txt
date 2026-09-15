@@ -1,0 +1,20 @@
+PC REMOTE - FLUTTER APP (phone_flutter/)
+
+Needs the Flutter SDK once (https://docs.flutter.dev/get-started/install).
+No SDK on this PC yet, so the project is scaffolded and ready.
+
+1) Install SDK, then in this folder:
+   flutter pub get
+   flutter analyze        (must be clean)
+   flutter run            (phone in USB debug mode, or emulator)
+
+2) In the app: enter PC IP 192.168.1.4 + PIN 1234.
+   Fingerprint gate first. Tabs: Home / Bright / Profiles / Folders.
+
+3) Build APK to share without SDK on phone:
+   flutter build apk --release
+   -> build/app/outputs/flutter-apk/app-release.apk
+
+UI built with the flutter-ui-ux skill: Material 3 seed theme (theme.dart),
+composed widgets (widgets/ui.dart), implicit animations (fade status card,
+150ms button press), ListView.builder folder list, Semantics labels.

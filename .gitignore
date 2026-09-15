@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+node_modules/
+.expo/
+.darts_tool/
+.dart_tool/
+build/
+profiles/activity.log
+profiles/daemon.log
+*.log
+# release signing: never commit keys
+*.jks
+*.keystore
+android/key.properties
+pc_remote/android/keystore.pass

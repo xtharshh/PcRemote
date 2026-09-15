@@ -1,0 +1,5 @@
+{
+  "phone_pin_demo": "1234",
+  "brightness": { "min": 10, "max": 100, "interval_s": 5 },
+  "server": { "port": 5000 }
+}

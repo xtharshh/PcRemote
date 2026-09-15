@@ -1,0 +1,20 @@
+PC REMOTE - ANDROID (Expo, no Android Studio needed)
+
+1) ON PC (one time):
+   cd D:\OpenSourceProjects\autoBrightness\phone_app
+   npm install
+   npx expo start
+   -> shows QR code.
+
+2) ON PHONE:
+   Install "Expo Go" from Play Store.
+   Same WiFi as PC. Scan the QR from step 1.
+   App opens. Enter PC IP 192.168.1.4 + PIN 1234. Save on phone.
+   Fingerprint gate is asked first. Phone PIN/biometric never leaves phone.
+
+3) BUILD real APK later (optional):
+   npx expo run:android   (needs Android Studio)
+   or: eas build -p android --profile preview   (needs expo account)
+
+TABS: home (lock/unlock), bright, profiles (admin/guest/kid),
+folders (scan disks, tap to select, add to block list).

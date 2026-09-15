@@ -1,0 +1,2 @@
+# MVP: stdlib only (no pip install needed)
+# v0.2+: opencv-python numpy astral

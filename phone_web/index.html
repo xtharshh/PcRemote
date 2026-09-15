@@ -1,0 +1,53 @@
+<!doctype html><meta name=viewport content="width=device-width,initial-scale=1">
+<title>PC Remote</title><style>
+body{font-family:system-ui;margin:0;background:#111;color:#fff;padding:14px;max-width:520px}
+button{width:100%;padding:16px;margin:6px 0;font-size:18px;border:0;border-radius:12px}
+.red{background:#e53935;color:#fff}.green{background:#43a047;color:#fff}.blue{background:#1e88e5;color:#fff}.gray{background:#333;color:#fff}
+input,select,textarea{width:100%;padding:12px;font-size:16px;border-radius:10px;border:0;margin:6px 0;box-sizing:border-box}
+.card{background:#222;border-radius:12px;padding:12px;margin:10px 0}
+h3{margin:14px 0 4px}
+pre{white-space:pre-wrap;font-size:12px}
+.row{display:flex;gap:8px}.row button{flex:1}
+</style>
+<h2>My Laptop Remote</h2>
+<div class=card>PIN <input id=pin value=1234 inputmode=numeric></div>
+<div class=row><button class=red onclick="cmd('/lock')">LOCK</button>
+<button class=green onclick="cmd('/unlock-approve')">UNLOCK</button></div>
+<div class=card><h3>Brightness</h3>
+<div class=row><input id=bri type=number value=50>
+<button class=blue onclick="bri()">Set</button>
+<button class=blue onclick="cmd('/auto-once')">Auto</button></div></div>
+<div class=card><h3>Profiles</h3>
+<div class=row><select id=pname><option>admin</option><option selected>guest</option><option>kid</option></select>
+<button class=gray onclick="loadP()">Load</button></div>
+<textarea id=pdata rows=8>{"folders_deny":[],"settings_hide":"accounts;bluetooth","apps_deny":["regedit.exe"],"time_minutes":30}</textarea>
+<div class=row><button class=gray onclick="saveP()">Save</button>
+<button class=green onclick="gstart()">Start</button>
+<button class=red onclick="gstop()">Stop</button></div></div>
+<div class=card><h3>Block folders — pick from laptop</h3>
+<div class=row><select id=drv></select>
+<button class=gray onclick="loadPick()">Scan</button></div>
+<select id=folder size=8 multiple style="height:160px"></select>
+<div class=row><button class=blue onclick="addBlock()">+ Add to block list</button>
+<button class=gray onclick="browseUp()">Up</button></div>
+<div style="font-size:12px;opacity:.7">Tap folders to select, then Add. They go into profile JSON.</div></div>
+<div class=row><button class=gray onclick="status()">Status</button>
+<button class=gray onclick="sense()">Sense light</button></div>
+<pre id=out class=card>...</pre>
+<script>
+async function post(p,b){return(await fetch(p,{method:'POST',headers:{'X-PIN':pin.value,'Content-Type':'application/json'},body:JSON.stringify(b||{})})).json()}
+async function status(){out.textContent=JSON.stringify(await(await fetch('/status')).json(),null,2)}
+async function sense(){out.textContent=JSON.stringify(await(await fetch('/sense')).json(),null,2)}
+async function cmd(p){out.textContent=JSON.stringify(await post(p),null,2)}
+async function bri(){out.textContent=JSON.stringify(await post('/brightness',{level:+bri.value}),null,2)}
+async function gstart(){out.textContent=JSON.stringify(await post('/guest-start',{name:pname.value}),null,2)}
+async function gstop(){out.textContent=JSON.stringify(await post('/guest-stop',{name:pname.value}),null,2)}
+async function loadP(){out.textContent=JSON.stringify(await post('/profile-get',{name:pname.value}),null,2);try{pdata.value=JSON.stringify(JSON.parse(out.textContent).data,null,2)}catch(e){}}
+async function saveP(){try{out.textContent=JSON.stringify(await post('/profile-save',{name:pname.value,data:JSON.parse(pdata.value)}),null,2)}catch(e){out.textContent='bad JSON'}}
+let curPath="";
+async function loadPick(){let r=await(await fetch('/pick')).json();drv.innerHTML=r.drives.map(d=>`<option value="${d.root}">${d.root} ${d.label} (${d.free_gb}/${d.total_gb}GB)</option>`).join('');curPath=drv.value||'D:\\';browse(curPath);let sp=(r.specials||[]).map(s=>`<option value="${s.full}">${s.full}</option>`).join('');folder.innerHTML=sp+folder.innerHTML}
+async function browse(p){curPath=p;let r=await(await fetch('/folders?path='+encodeURIComponent(p))).json();if(r.folders){folder.innerHTML=(r.folders||[]).map(f=>`<option value="${f.full}">${f.name}</option>`).join('')}else{out.textContent=JSON.stringify(r,null,2)}}
+async function browseUp(){let p=curPath.replace(/\\$/,'');let i=p.lastIndexOf('\\');if(i>1)browse(p.slice(0,i+1));}
+async function addBlock(){let sel=[...folder.selectedOptions].map(o=>o.value);if(!sel.length){out.textContent='select folders first';return}try{let j=JSON.parse(pdata.value);j.folders_deny=[...new Set([...(j.folders_deny||[]),...sel])];pdata.value=JSON.stringify(j,null,2);out.textContent='added: '+sel.join(', ')}catch(e){out.textContent='load profile first'}}
+status();loadPick();drv.onchange=()=>browse(drv.value);folder.ondblclick=()=>{if(folder.value)browse(folder.value)};
+</script>

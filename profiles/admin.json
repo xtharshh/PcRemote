@@ -1,0 +1,9 @@
+{
+  "name": "admin",
+  "windows_user": "Owner (current, no new user)",
+  "folders_deny": [],
+  "settings_hide": "",
+  "apps_deny": [],
+  "time_minutes": 0,
+  "note": "Full access. Starting admin = remove all blocks."
+}

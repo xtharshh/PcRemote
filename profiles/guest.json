@@ -1,0 +1,9 @@
+{
+  "name": "guest",
+  "windows_user": "PC-Guest",
+  "folders_deny": [],
+  "settings_hide": "accounts;bluetooth;windowsupdate",
+  "apps_deny": ["regedit.exe", "powershell.exe"],
+  "time_minutes": 30,
+  "note": "Friend for short use. Chrome only."
+}
