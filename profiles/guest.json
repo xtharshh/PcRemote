@@ -1,9 +1,14 @@
 {
   "name": "guest",
   "windows_user": "PC-Guest",
-  "folders_deny": [],
+  "folders_deny": [
+    "D:\\OpenSourceProjects"
+  ],
   "settings_hide": "accounts;bluetooth;windowsupdate",
-  "apps_deny": ["regedit.exe", "powershell.exe"],
+  "apps_deny": [
+    "regedit.exe",
+    "powershell.exe"
+  ],
   "time_minutes": 30,
   "note": "Friend for short use. Chrome only."
 }

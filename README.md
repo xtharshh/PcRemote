@@ -30,6 +30,7 @@ with small modules sharing one sensor + service stack.
 | 🔆 | **Auto-brightness** | Screen follows room light — webcam sensor + time-of-day fallback, log curve, flicker-free smoothing |
 | 👥 | **Profiles: admin / guest / kid** | Phone decides which folders, Settings pages & apps each person may open + time limits |
 | 🔒 | **Phone remote** | Lock instantly, approve unlock, brightness slider, profiles — PIN + fingerprint that never leave your phone |
+| ⏻ | **Power scheduling** | Shutdown / restart / sleep / lock now or in N minutes, with live countdowns + per-action cancel |
 | 📡 | **WiFi auto-find** | PC broadcasts over LAN; the app finds it, no typing IP |
 | 💡 | **Folder picker** | Real disks + folders (`C:\`, `D:\APEX`…) with free space, search, tap-to-block |
 | 🪟 | **Zero windows** | Daemon runs via `pythonw` + `CREATE_NO_WINDOW` — no flashing consoles, starts at logon |
@@ -63,8 +64,8 @@ time-of-day curve (`sensors/timeofday.py`) · HID ALS if present.
 src/autobrightness/   drivers/wmi_brightness.py · sensors/timeofday.py
                       sensors/camera.py · core/curve.py · core/fusion.py
                       service.py (loop)
-src/pc_service/       server.py · daemon.py · guest.py · enforce.py
-                      drives.py · lock.py · activity.py
+src/pc_service/       server.py (lock/power/profiles/folders API) · daemon.py
+                      guest.py · enforce.py · drives.py · lock.py · activity.py
 src/winutil.py        CREATE_NO_WINDOW subprocess wrapper (no flashing windows)
 config/default.json   profiles/admin.json · profiles/guest.json · profiles/kid.json
 scripts/              run_all.ps1 · install_autostart.ps1
@@ -72,7 +73,8 @@ scripts/              run_all.ps1 · install_autostart.ps1
 phone_web/            mobile web remote — no install, open from phone browser
 phone_app/            Android app (Expo / React Native)
 pc_remote/            Flutter app, Material 3 (recommended — signed release APK ready)
-tests/test_curve.py
+                      lib/screens/power.dart (Power scheduling tab)
+tests/test_curve.py · tests/test_power.py (6/6 pass)
 ```
 
 ---
@@ -161,20 +163,19 @@ release and reports what the PC actually did**, **one active profile
 at a time** (starting a new one auto-stops the old; ACTIVE badge),
 **visual profile editor** (chips + sliders, no JSON, incl. **Admin —
 full access**), folder picker with search that saves into a profile
-and offers **Start now** so blocks take effect immediately.
+and offers **Start now** so blocks take effect immediately, plus a
+**Power tab** (shutdown/restart/sleep/lock now or in N min, live countdowns,
+cancel one or all).
 
 ```powershell
 Set-Location pc_remote
 flutter pub get
 flutter analyze          # clean
-flutter test             # 3/3 pass
+flutter test             # pass
 flutter devices          # phone visible (USB debugging on)
 flutter run              # install + launch
-flutter build apk --release   # keep-forever APK
+flutter build apk --release   # release APK (build/ is gitignored)
 ```
-
-**Signed release APK** already built (v1.2.0):
-`pc_remote/build/app/outputs/flutter-apk/app-release.apk` (50 MB).
 Reinstall fresh so Android grants the LAN/WiFi permissions
 (same WiFi, allow WiFi/location when asked).
 
@@ -184,8 +185,7 @@ Reinstall fresh so Android grants the LAN/WiFi permissions
 Release signing: `pc_remote/android/key.properties` + `.jks` are gitignored —
 generate your own with `keytool -genkeypair` (see
 `pc_remote/android/app/build.gradle.kts`); without them the build falls back
-to debug keys. Release cert SHA-256:
-`248ecb4d17238159c8e145c91d15cff94e74209fe86351164765443d97f1e09a`.
+to debug keys.
 
 Older draft in `phone_flutter/` (same 4 tabs, simpler UI) — kept for reference.
 
@@ -216,6 +216,8 @@ Settings-hide policy, app-killer watcher, auto-logoff timer.
 | GET | `/folders?path=D:\` | folders in path |
 | GET | `/pick` | drives + specials + top folders |
 | POST | `/lock` | lock Windows now |
+| POST | `/power` `{"action":"shutdown","in_minutes":10}` | shutdown / restart / sleep / lock now (`0`) or in N min |
+| POST | `/power-cancel` `{"action":"shutdown"}` | cancel one (or all) pending power timers |
 | POST | `/unlock-approve` | log phone approval |
 | POST | `/brightness` `{"level":50}` | set brightness |
 | POST | `/auto-once` | sense + apply once |

@@ -13,6 +13,14 @@ pre{white-space:pre-wrap;font-size:12px}
 <div class=card>PIN <input id=pin value=1234 inputmode=numeric></div>
 <div class=row><button class=red onclick="cmd('/lock')">LOCK</button>
 <button class=green onclick="cmd('/unlock-approve')">UNLOCK</button></div>
+<div class=card><h3>Power — now or in minutes</h3>
+<div class=row><input id=pmins type=number value=0 style="max-width:110px">
+<button class=gray onclick="status()">Refresh</button></div>
+<div class=row><button class=red onclick="power('shutdown')">Off</button>
+<button class=red onclick="power('restart')">Restart</button></div>
+<div class=row><button class=gray onclick="power('sleep')">Sleep</button>
+<button class=gray onclick="power('lock')">Lock</button></div>
+<div class=row><button class=gray onclick="cmd('/power-cancel')">Cancel timers</button></div></div>
 <div class=card><h3>Brightness</h3>
 <div class=row><input id=bri type=number value=50>
 <button class=blue onclick="bri()">Set</button>
@@ -39,6 +47,7 @@ async function post(p,b){return(await fetch(p,{method:'POST',headers:{'X-PIN':pi
 async function status(){out.textContent=JSON.stringify(await(await fetch('/status')).json(),null,2)}
 async function sense(){out.textContent=JSON.stringify(await(await fetch('/sense')).json(),null,2)}
 async function cmd(p){out.textContent=JSON.stringify(await post(p),null,2)}
+async function power(a){out.textContent=JSON.stringify(await post('/power',{action:a,in_minutes:+pmins.value||0}),null,2)}
 async function bri(){out.textContent=JSON.stringify(await post('/brightness',{level:+bri.value}),null,2)}
 async function gstart(){out.textContent=JSON.stringify(await post('/guest-start',{name:pname.value}),null,2)}
 async function gstop(){out.textContent=JSON.stringify(await post('/guest-stop',{name:pname.value}),null,2)}

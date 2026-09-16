@@ -48,7 +48,10 @@ def block_folder(path: str, profile: str = "guest") -> str:
         return "admin-no-block"
     r = _run(["icacls", path, "/deny", f"{user}:(OI)(CI)F"],
                capture_output=True, text=True, timeout=15)
-    return (r.stdout or "") + (r.stderr or "")
+    out = (r.stdout or "") + (r.stderr or "")
+    if r.returncode != 0:
+        return f"Error({r.returncode}): {out.strip()[:500]}"
+    return out.strip() or "OK"
 
 def unblock_folder(path: str, profile: str = "guest") -> str:
     user = _user(profile)
@@ -76,7 +79,10 @@ def apply_profile(name: str = "guest") -> dict:
     p = load_profile(name)
     out = {"user": create_user(name)}
     for folder in p.get("folders_deny", []):
-        out[f"folder:{folder}"] = block_folder(folder, name)
+        res = block_folder(folder, name)
+        out[f"folder:{folder}"] = res
+        if "skip-missing" in res or "admin-no-block" in res or "Error" in res or "Access is denied" in res:
+            log(f"block-folder-FAIL:{folder} -> {res[:200]}")
     vis = p.get("settings_hide", "")
     if vis:
         out["settings"] = hide_settings_pages(f"hide:{vis}" if not vis.startswith("hide:") else vis)

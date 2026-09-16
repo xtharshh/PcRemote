@@ -1,4 +1,4 @@
-package com.owner.pc_remote
+package com.lumendesk.app
 
 import io.flutter.embedding.android.FlutterActivity
 

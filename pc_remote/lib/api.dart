@@ -94,6 +94,11 @@ class PcApi {
 
   Future<Map<String, dynamic>> lock() => _post('/lock');
   Future<Map<String, dynamic>> unlockApprove() => _post('/unlock-approve');
+  Future<Map<String, dynamic>> power(String action,
+          {int inMinutes = 0}) =>
+      _post('/power', {'action': action, 'in_minutes': inMinutes});
+  Future<Map<String, dynamic>> powerCancel([String? action]) =>
+      _post('/power-cancel', action == null ? {} : {'action': action});
   Future<Map<String, dynamic>> setBrightness(int level) =>
       _post('/brightness', {'level': level});
   Future<Map<String, dynamic>> autoOnce() => _post('/auto-once');

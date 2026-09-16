@@ -1,5 +1,5 @@
 """Phone remote v2: lock/unlock-approve, brightness, auto-brightness once, profiles CRUD, guest start/stop, activity log."""
-import json, os, sys, socket
+import json, os, sys, socket, subprocess, threading, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -27,6 +27,55 @@ def _guest():
     from pc_service import guest as G
     G.ON_ACTIVE_CLEAR = _clear_active  # time-limit expiry clears ACTIVE too
     return G
+
+# Timed power actions: shutdown / restart / sleep / lock, now or in N min.
+# Only one pending timer per action; scheduling again replaces the old one.
+POWER_ACTIONS = ("shutdown", "restart", "sleep", "lock")
+POWER = {}  # action -> {"timer": Timer, "at": epoch, "in_minutes": int, "by": ip}
+
+def _parse_power(body) -> tuple:
+    action = str((body or {}).get("action", "")).lower()
+    if action not in POWER_ACTIONS:
+        return None, 0, "action must be one of: shutdown, restart, sleep, lock"
+    try:
+        mins = int((body or {}).get("in_minutes", 0) or 0)
+    except Exception:
+        return None, 0, "in_minutes must be a number"
+    if mins < 0 or mins > 1440:
+        return None, 0, "in_minutes must be 0-1440"
+    return action, mins, None
+
+def _power_now(action: str) -> bool:
+    try:
+        if action == "lock":
+            return bool(lock_now())
+        if action == "shutdown":
+            r = subprocess.run(["shutdown", "/s", "/t", "0"],
+                               capture_output=True, timeout=15)
+            return r.returncode == 0
+        if action == "restart":
+            r = subprocess.run(["shutdown", "/r", "/t", "0"],
+                               capture_output=True, timeout=15)
+            return r.returncode == 0
+        if action == "sleep":
+            r = subprocess.run(["rundll32.exe", "powrprof.dll,SetSuspendState",
+                                "0,1,0"], capture_output=True, timeout=15)
+            return r.returncode == 0
+    except Exception:
+        return False
+    return False
+
+def _power_fire(action: str, by: str):
+    POWER.pop(action, None)
+    ok = _power_now(action)
+    log(f"power:{action}:fired->{ok} (scheduled by {by})")
+
+def _power_list(now: float = None) -> list:
+    now = time.time() if now is None else now
+    return [{"action": a,
+             "in_minutes": e["in_minutes"],
+             "remaining_s": max(0, int(e["at"] - now))}
+            for a, e in POWER.items()]
 
 def check_pin(h) -> bool:
     return h.get("X-PIN") == PHONE_PIN
@@ -65,7 +114,8 @@ class H(BaseHTTPRequestHandler):
                         "pc": pc,
                         "auto": os.environ.get("PCREMOTE_AUTOBRIGHT", "1") == "1",
                         "active": ACTIVE.get("name"),
-                        "supported": bri is not None})
+                        "supported": bri is not None,
+                        "power": _power_list()})
             return
         if p == "/sense":
             cam, conf = estimate_lux()
@@ -105,6 +155,51 @@ class H(BaseHTTPRequestHandler):
         ip = self.client_address[0]
         if p == "/lock":
             ok = lock_now(); log(f"lock:{ok} by {ip}"); self._send({"ok": ok}); return
+        if p == "/power":
+            action, mins, err = _parse_power(body)
+            if err:
+                self._send({"ok": False, "err": err}, 400); return
+            if mins == 0:
+                ok = _power_now(action)
+                log(f"power:{action}:now->{ok} by {ip}")
+                if not ok:
+                    self._send({"ok": False, "err": f"{action} failed on the PC"}); return
+                self._send({"ok": True, "action": action, "done": True}); return
+            old = POWER.pop(action, None)
+            if old is not None:
+                try:
+                    old["timer"].cancel()
+                except Exception:
+                    pass
+            t = threading.Timer(mins * 60, _power_fire, args=(action, ip))
+            t.daemon = True
+            t.start()
+            POWER[action] = {"timer": t, "at": time.time() + mins * 60,
+                             "in_minutes": mins, "by": ip}
+            log(f"power:{action}:in-{mins}min by {ip}")
+            self._send({"ok": True, "action": action, "in_minutes": mins,
+                        "replaced": old is not None}); return
+        if p == "/power-cancel":
+            want = str(body.get("action", "") or "").lower()
+            cancelled = []
+            if want:
+                e = POWER.pop(want, None)
+                if e is not None:
+                    try:
+                        e["timer"].cancel()
+                    except Exception:
+                        pass
+                    cancelled = [want]
+            else:
+                for a, e in list(POWER.items()):
+                    try:
+                        e["timer"].cancel()
+                    except Exception:
+                        pass
+                    cancelled.append(a)
+                POWER.clear()
+            log(f"power-cancel:{cancelled or 'none'} by {ip}")
+            self._send({"ok": True, "cancelled": cancelled}); return
         if p == "/unlock-approve":
             # v2: approval logged; full unlock from lockscreen = v1.0 Credential Provider.
             if NONCE.get(ip) == "pending":

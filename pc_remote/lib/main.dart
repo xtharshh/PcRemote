@@ -6,6 +6,7 @@ import 'screens/home.dart';
 import 'screens/brightness.dart';
 import 'screens/profiles.dart';
 import 'screens/folders.dart';
+import 'screens/power.dart';
 import 'widgets/ui.dart';
 
 void main() => runApp(const LumenDeskApp());
@@ -68,6 +69,7 @@ class _LumenDeskAppState extends State<LumenDeskApp> {
                   BrightnessScreen(api: _api!),
                   ProfilesScreen(api: _api!),
                   FoldersScreen(api: _api!),
+                  PowerScreen(api: _api!),
                 ],
               ),
               bottomNavigationBar: NavigationBar(
@@ -82,6 +84,9 @@ class _LumenDeskAppState extends State<LumenDeskApp> {
                       icon: Icon(Icons.people), label: 'Profiles'),
                   NavigationDestination(
                       icon: Icon(Icons.folder), label: 'Folders'),
+                  NavigationDestination(
+                      icon: Icon(Icons.power_settings_new),
+                      label: 'Power'),
                 ],
               ),
             ),

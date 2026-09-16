@@ -1,6 +1,6 @@
 param([string]$Pin="1234", [int]$Port=5000)
-# Always-on, NO terminal window. Works WITHOUT admin (logon task for current user).
-# For run-before-logon as well, re-run this file as Administrator.
+# Always-on, NO terminal window. Runs elevated so icacls/user-creation work.
+# Must be run from an Administrator PowerShell once.
 $pyw = (Get-Command pythonw).Source
 $dir = Split-Path -Parent $PSScriptRoot
 $action = New-ScheduledTaskAction -Execute $pyw `
@@ -9,12 +9,12 @@ $trig = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
   -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -Hidden
 try {
-  Register-ScheduledTask -TaskName "PCRemote" -Action $action -Trigger $trig `
-    -Settings $set -Force | Out-Null
-  Start-ScheduledTask -TaskName "PCRemote" -ErrorAction SilentlyContinue
-  Write-Output "PCRemote installed: no window, starts at your logon, PIN=$Pin PORT=$Port"
+  # -RunLevel Highest on Register-ScheduledTask works on Win10/Server2016+
+  Register-ScheduledTask -TaskName "LumenDesk" -Action $action -Trigger $trig `
+    -Settings $set -RunLevel Highest -Force | Out-Null
+  Start-ScheduledTask -TaskName "LumenDesk" -ErrorAction SilentlyContinue
+  Write-Output "LumenDesk service installed (elevated): starts at logon, PIN=$Pin PORT=$Port"
 } catch {
-  Write-Output "NEED ADMIN or failed: $($_.Exception.Message)"
-  Write-Output "Right-click PowerShell -> Run as Administrator, then run this file again."
+  Write-Output "FAILED (run this script from Administrator PowerShell): $($_.Exception.Message)"
 }
 Write-Output "Check: scripts/status_daemon.ps1 | Remove: scripts/uninstall_autostart.ps1"
