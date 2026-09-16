@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:pc_remote/links.dart';
 import 'package:pc_remote/theme.dart';
 
 void main() {
@@ -24,5 +25,12 @@ void main() {
       AppTheme.profileAccent('kid'),
     };
     expect(accents.length, 3);
+  });
+
+  test('windows download links point at GitHub releases', () {
+    expect(AppLinks.githubRepo, contains('github.com/xtharshh/PcRemote'));
+    expect(AppLinks.windowsDownload, contains('github.com/xtharshh/PcRemote'));
+    expect(AppLinks.windowsDownload, contains('releases'));
+    expect(Uri.tryParse(AppLinks.windowsDownload)?.hasAbsolutePath, isTrue);
   });
 }

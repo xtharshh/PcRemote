@@ -7,7 +7,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:local_auth/local_auth.dart';
 import '../api.dart';
+import '../links.dart';
 import '../widgets/ui.dart';
+import '../widgets/windows_module.dart';
 
 /// Phone-local gate: PIN + fingerprint + WiFi auto-find.
 /// Nothing secret leaves the phone.
@@ -57,7 +59,7 @@ class _GateScreenState extends State<GateScreen> {
       // missing INTERNET permission with a friendly hint.
       final probe = await http
           .get(Uri.http('$host:5000', '/status'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 3));
       if (probe.statusCode != 200) throw Exception('HTTP ${probe.statusCode}');
       try {
         final m = jsonDecode(probe.body);
@@ -93,7 +95,7 @@ class _GateScreenState extends State<GateScreen> {
     }
   }
 
-  /// Step 1: listen 4s for the PC's UDP beacon (no typing needed).
+  /// Step 1: listen 2s for the PC's UDP beacon (no typing needed).
   /// Step 2 (fallback): sweep the /24 of the typed IP with GET /status.
   /// This fixes "WiFi scan blocked" on phones where UDP bind fails:
   /// the sweep uses plain HTTP which only needs INTERNET permission.
@@ -124,7 +126,7 @@ class _GateScreenState extends State<GateScreen> {
           }
         }
       });
-      await Future.delayed(const Duration(seconds: 4));
+      await Future.delayed(const Duration(seconds: 2));
       await sub.cancel();
       sock.close();
     } on SocketException catch (e) {
@@ -174,14 +176,14 @@ class _GateScreenState extends State<GateScreen> {
   }
 
   /// Probe 192.168.X.1..254 (from the typed IP) for GET /status.
-  /// 8 at a time, 1.2s timeout each — ~30s worst case, usually <8s.
+  /// 16 at a time, 800ms timeout each — ~12s worst case, usually <4s.
   Future<Map<String, String>> _sweepSubnet() async {
     final base = _subnetBase(_ip.text.trim());
     if (base == null) return {};
     final out = <String, String>{};
     final addrs =
         List.generate(254, (i) => '$base${i + 1}').where((a) => a != _ip.text.trim());
-    // Skip our own .1 gateway ping flood: probe in small batches.
+    // Probe in small batches with short timeout.
     for (var i = 0; i < addrs.length; i += 16) {
       if (!mounted) break;
       final batch = addrs.skip(i).take(16);
@@ -189,7 +191,7 @@ class _GateScreenState extends State<GateScreen> {
         try {
           final r = await http
               .get(Uri.http('$a:5000', '/status'))
-              .timeout(const Duration(milliseconds: 1200));
+              .timeout(const Duration(milliseconds: 800));
           if (r.statusCode == 200) {
             final m = jsonDecode(r.body);
             final name = (m is Map ? (m['pc'] ?? 'PC') : 'PC').toString();
@@ -207,7 +209,7 @@ class _GateScreenState extends State<GateScreen> {
     try {
       final r = await http
           .get(Uri.http('${_ip.text.trim()}:5000', '/status'))
-          .timeout(const Duration(milliseconds: 1500));
+          .timeout(const Duration(milliseconds: 1000));
       if (r.statusCode == 200) {
         final m = jsonDecode(r.body);
         out[_ip.text.trim()] =
@@ -313,6 +315,17 @@ class _GateScreenState extends State<GateScreen> {
                   const SizedBox(height: 12),
                   Text(_note, style: const TextStyle(fontSize: 13)),
                 ],
+                const SizedBox(height: 12),
+                // First-time setup: the phone app needs the Windows
+                // module running on the PC — downloadable from GitHub.
+                const WindowsModuleCard(compact: true),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () => AppLinks.openRepo(context),
+                    child: const Text('View source on GitHub'),
+                  ),
+                ),
               ],
             ),
           ),

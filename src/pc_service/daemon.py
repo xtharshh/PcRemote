@@ -28,21 +28,35 @@ def run_server():
             dlog(f"port busy, retry in 15s: {e}")
             time.sleep(15)
 
-def _bcast_targets() -> set:
+def _get_local_ips() -> list[str]:
+    """Get all non-loopback IPv4 addresses with a timeout."""
     import socket
-    targets = {"255.255.255.255"}
+    ips = []
     try:
-        for info in socket.getaddrinfo(socket.gethostname(), None,
-                                        socket.AF_INET):
+        # Use a short timeout for getaddrinfo to avoid hangs
+        socket.setdefaulttimeout(2.0)
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
             ip = info[4][0]
             if ip.startswith("127."):
                 continue
             parts = ip.split(".")
             if len(parts) == 4:
-                targets.add(".".join(parts[:3] + ["255"]))
+                ips.append(ip)
     except Exception as e:
-        dlog("bcast-enum-err " + str(e)[:120])
+        dlog("ip-enum-err " + str(e)[:120])
+    finally:
+        socket.setdefaulttimeout(None)
+    return ips
+
+
+def _bcast_targets() -> set:
+    targets = {"255.255.255.255"}
+    for ip in _get_local_ips():
+        parts = ip.split(".")
+        if len(parts) == 4:
+            targets.add(".".join(parts[:3] + ["255"]))
     return targets
+
 
 def run_beacon():
     """UDP broadcast every 3s so the phone finds the PC without typing IP."""
@@ -56,17 +70,29 @@ def run_beacon():
         name = "PC"
     msg = json.dumps({"app": "PCRemote", "name": name, "port": port}).encode()
     dlog("beacon on")
+    consecutive_errors = 0
     while True:
         try:
-            for target in _bcast_targets():
+            targets = _bcast_targets()
+            if not targets or targets == {"255.255.255.255"}:
+                dlog("beacon: no local IPs found, retrying...")
+                time.sleep(5)
+                continue
+            for target in targets:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 try:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                     s.sendto(msg, (target, BEACON_PORT))
                 finally:
                     s.close()
+            consecutive_errors = 0
         except Exception as e:
-            dlog("beacon-err " + str(e)[:150])
+            consecutive_errors += 1
+            dlog(f"beacon-err ({consecutive_errors}): {str(e)[:150]}")
+            # Back off on repeated errors to avoid log spam
+            if consecutive_errors > 5:
+                time.sleep(15)
+                continue
         time.sleep(3)
 
 def run_brightness():

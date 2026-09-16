@@ -67,6 +67,10 @@ class PcApi {
   /// ("Operation not permitted, errno = 1") to an actionable hint.
   static String friendlyError(Object e) {
     final s = e.toString();
+    if (s.contains('TimeoutException') ||
+        s.contains('Future not completed')) {
+      return 'PC didn\u2019t answer in time \u2014 wrong IP? daemon stopped? different WiFi? firewall blocking TCP 5000?';
+    }
     if (s.contains('Operation not permitted') || s.contains('errno = 1')) {
       return 'Blocked by Android: reinstall the latest APK, allow WiFi/location, and join the same WiFi as your PC.';
     }

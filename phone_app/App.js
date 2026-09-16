@@ -18,15 +18,28 @@ export default function App() {
   const [sel, setSel] = useState(new Set());
 
   const base = () => `http://${ip.trim()}:5000`;
+  const fetchWithTimeout = async (url, options = {}, timeoutMs = 8000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, { ...options, signal: controller.signal });
+      return r;
+    } finally {
+      clearTimeout(id);
+    }
+  };
   const post = async (p, body) => {
-    const r = await fetch(base() + p, { method: 'POST',
+    const r = await fetchWithTimeout(base() + p, { method: 'POST',
       headers: { 'X-PIN': pin, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body || {}) });
+      body: JSON.stringify(body || {}) }, 10000);
     const j = await r.json();
     if (!r.ok) throw new Error(j.err || r.status);
     return j;
   };
-  const get = async (p) => (await fetch(base() + p)).json();
+  const get = async (p) => {
+    const r = await fetchWithTimeout(base() + p, {}, 8000);
+    return r.json();
+  };
 
   useEffect(() => { (async () => {
     const sIp = await SecureStore.getItemAsync('pc_ip');

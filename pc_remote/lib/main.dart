@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
+import 'links.dart';
 import 'theme.dart';
 import 'screens/gate.dart';
 import 'screens/home.dart';
@@ -47,6 +48,11 @@ class _LumenDeskAppState extends State<LumenDeskApp> {
                     ? 'Lumen Desk'
                     : 'Lumen Desk · ${_api!.displayName}'),
                 actions: [
+                  IconButton(
+                    tooltip: 'Download Windows module (GitHub)',
+                    icon: const Icon(Icons.download_for_offline_outlined),
+                    onPressed: () => AppLinks.openWindowsDownload(context),
+                  ),
                   IconButton(
                     tooltip: 'Change PC',
                     icon: const Icon(Icons.wifi_find),

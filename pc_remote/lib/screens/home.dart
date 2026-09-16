@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api.dart';
 import '../widgets/ui.dart';
+import '../widgets/windows_module.dart';
 
 /// Home dashboard: connected WiFi PC (by NAME, not IP), animated
 /// brightness ring, lock/unlock actions, activity timeline.
@@ -194,6 +195,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 title:
                     Text(l, style: const TextStyle(fontSize: 13)),
               )),
+          // Always reachable: if the PC goes offline the fix is usually
+          // "install / start the Windows module" — link to GitHub Releases.
+          const SectionTitle('Windows module'),
+          WindowsModuleCard(compact: !_online),
         ],
       ),
     );
