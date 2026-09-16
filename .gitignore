@@ -18,6 +18,8 @@ pc_remote/android/keystore.pass
 # privacy policy: submitted to Play Console manually, kept out of git
 PRIVACY_POLICY.md
 PRIVACY.md
+# store assets (feature graphic, high-res icon): local-only, never commit
+play-assets/
 
 .idea/
 
